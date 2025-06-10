@@ -25,6 +25,12 @@ namespace UnifiedMessagingSystem
     class UserManager
     {
         private Dictionary<int, User> users = new Dictionary<int, User>();
+        private MessengerProxy messengerProxy;
+
+        public UserManager(MessengerProxy proxy)
+        {
+            messengerProxy = proxy;
+        }
 
         public void AddUser(User user)
         {
@@ -43,6 +49,16 @@ namespace UnifiedMessagingSystem
             foreach (var user in users.Values)
             {
                 user.DisplayInfo();
+            }
+        }
+
+        public void DisplayUserChats(int userID)
+        {
+            var chats = messengerProxy.GetUserChats(userID);
+            Console.WriteLine($"Chats for user {userID}:");
+            foreach (var chat in chats)
+            {
+                Console.WriteLine($"Chat ID: {chat.ChatID}");
             }
         }
     }
@@ -70,13 +86,15 @@ namespace UnifiedMessagingSystem
         public List<int> Participants { get; private set; }
         public List<Message> Messages { get; private set; }
         public List<Message> PinnedMessages { get; private set; }
+        private MessengerProxy messengerProxy;
 
-        public Chat(int chatID, List<int> participants)
+        public Chat(int chatID, List<int> participants, MessengerProxy proxy)
         {
             ChatID = chatID;
             Participants = participants;
             Messages = new List<Message>();
             PinnedMessages = new List<Message>();
+            messengerProxy = proxy;
         }
 
         public void AddMessage(Message message)
@@ -86,25 +104,12 @@ namespace UnifiedMessagingSystem
 
         public void PinMessage(int messageID)
         {
-            var message = Messages.Find(m => m.MessageID == messageID);
-            if (message != null && !PinnedMessages.Contains(message))
-            {
-                PinnedMessages.Add(message);
-                Console.WriteLine($"Message {messageID} pinned in chat {ChatID}.");
-            }
-            else
-            {
-                Console.WriteLine($"Message {messageID} not found or already pinned.");
-            }
+            messengerProxy.PinMessage(ChatID, messageID);
         }
 
         public void DisplayPinnedMessages()
         {
-            Console.WriteLine($"Pinned messages in chat {ChatID}:");
-            foreach (var message in PinnedMessages)
-            {
-                Console.WriteLine($"[{message.Timestamp}] {message.Content}");
-            }
+            messengerProxy.DisplayPinnedMessages(ChatID);
         }
     }
 
@@ -169,7 +174,7 @@ namespace UnifiedMessagingSystem
         public int CreateChat(List<int> participants)
         {
             int newChatID = new Random().Next(1, 10000);
-            Chats[newChatID] = new Chat(newChatID, participants);
+            Chats[newChatID] = new Chat(newChatID, participants, MessengerProxy.Instance);
             Console.WriteLine($"Chat {newChatID} created.");
             return newChatID;
         }
@@ -205,11 +210,25 @@ namespace UnifiedMessagingSystem
         private Dictionary<int, List<Message>> cacheMessages;
         private Dictionary<int, List<Chat>> cacheChats;
 
-        public MessengerProxy()
+        private static MessengerProxy _instance;
+
+        private MessengerProxy()
         {
             messenger = Messenger.Instance;
             cacheMessages = new Dictionary<int, List<Message>>();
             cacheChats = new Dictionary<int, List<Chat>>();
+        }
+
+        public static MessengerProxy Instance
+        {
+            get
+            {
+                if (_instance == null)
+                {
+                    _instance = new MessengerProxy();
+                }
+                return _instance;
+            }
         }
 
         public List<Chat> GetUserChats(int userID)
@@ -268,15 +287,15 @@ namespace UnifiedMessagingSystem
     {
         static void Main(string[] args)
         {
-            UserManager userManager = new UserManager();
+            MessengerProxy messengerProxy = MessengerProxy.Instance;
+            UserManager userManager = new UserManager(messengerProxy);
+
             userManager.AddUser(new User("Alice", 1));
             userManager.AddUser(new User("Bob", 2));
             userManager.DisplayUsers();
 
-            MessengerProxy messengerProxy = new MessengerProxy();
-
             // Создание чата
-            var chatID = Messenger.Instance.CreateChat(new List<int> { 1, 2 });
+            var chatID = messengerProxy.Instance.CreateChat(new List<int> { 1, 2 });
 
             // Отправка сообщения
             messengerProxy.SendMessage(chatID, 1, "Hello!");
