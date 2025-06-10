@@ -81,7 +81,7 @@ graph TD
     Program --> UserManager
     Program --> MessengerProxy
 
-Запуск проекта
+## Запуск проекта
 Клонировать репозиторий
 
 Открыть в Visual Studio 2022+
