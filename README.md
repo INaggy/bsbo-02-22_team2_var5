@@ -80,7 +80,7 @@ graph TD
     MessengerProxy --> Messenger[Singleton Messenger]
     Program --> UserManager
     Program --> MessengerProxy
-
+```
 ## Запуск проекта
 Клонировать репозиторий
 
